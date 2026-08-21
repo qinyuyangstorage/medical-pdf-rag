@@ -1,0 +1,11 @@
+.venv/
+.venv-*/
+out/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local secrets (do not commit); keep only instructions and templates.
+secrets/*
+!secrets/README.md
+!secrets/*.example

@@ -1,69 +1,103 @@
-## medrag（医疗 PDF → 高质量 RAG 知识库原型）
+# Medical PDF RAG
 
-这个目录提供一套**可运行的端到端原型**，用于把医疗 PDF 自动处理为可追溯的 RAG 知识库数据（chunk JSONL），并提供一个轻量检索/问答接口骨架。
+A traceable ingestion and retrieval baseline for turning medical PDFs into citation-ready JSONL chunks. The project preserves page numbers and bounding boxes so every retrieved passage can be traced back to its source page.
 
-### 目录结构
+## What it demonstrates
 
-- `src/medrag/`: 核心代码
-- `scripts/`: 本地运行脚本
-- `secrets/`: **本地密钥目录（不进 git）**
+- PDF layout extraction with PyMuPDF
+- A typed intermediate representation (`DocIR`)
+- Section-aware chunking with lightweight clinical tags
+- MinerU cloud-output adapter for OCR-heavy documents
+- Dependency-free lexical retrieval baseline
+- Deterministic content-based document identifiers
+- Automated end-to-end tests and GitHub Actions
 
-### 安装
+This is a document-engineering prototype, not a clinical decision-support system. It does not provide medical advice and it does not include patient data.
+
+## Quick start
+
+Requires Python 3.10 or newer.
 
 ```bash
-python3 -m venv .venv
+git clone https://github.com/qinyuyangstorage/medical-pdf-rag.git
+cd medical-pdf-rag
+python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
-### MinerU 官方云端（A 路线：Precision Extract）
-
-`mineru-open-sdk` 需要 **Python >= 3.10**。你这台机器通常可以用 Homebrew 的 `python3.13` 单独建 venv：
+Put one or more PDFs in `samples/`, then run:
 
 ```bash
-cd medical-pdf-rag
-/opt/homebrew/bin/python3.13 -m venv .venv-mineru-cloud
-source .venv-mineru-cloud/bin/activate
-pip install -U pip
-pip install mineru-open-sdk tqdm
+medrag ingest --input_dir samples --out_dir out
+medrag stats --chunk_dir out/chunks
+medrag search --chunk_dir out/chunks --query "adverse events mortality" --top_k 3
 ```
 
-把 token 放到这个文件（**你只需要编辑这一处**）：
+Generated artifacts:
 
-`secrets/mineru_token.env`
-
-内容一行：
-
-```
-MINERU_TOKEN=你的token
+```text
+out/
+├── docir/   # typed document blocks with page coordinates
+└── chunks/  # JSONL chunks with section paths, tags, and citations
 ```
 
-然后批量跑样例 PDF（输出每个 PDF 一个子目录）：
+## MinerU route
+
+For scanned or layout-heavy PDFs, place the MinerU token in the ignored file `secrets/mineru_token.env`, following `secrets/README.md`.
 
 ```bash
-cd medical-pdf-rag
-source .venv-mineru-cloud/bin/activate
 python scripts/mineru_cloud_batch.py \
-  --input_dir "./samples" \
-  --out_dir "./mineru_cloud_out" \
-  --model vlm \
-  --language ch \
-  --ocr --formula --table
+  --input_dir ./samples \
+  --out_dir ./mineru_cloud_out \
+  --model vlm --language ch --ocr --formula --table
+
+medrag ingest-mineru-cloud \
+  --mineru_out_dir ./mineru_cloud_out \
+  --out_dir ./out_mineru
 ```
 
-### 快速开始（基于样例 PDF 生成 chunks）
+Tokens, source PDFs, extracted text, generated chunks, and virtual environments are excluded from version control.
+
+## Architecture
+
+```text
+PDF / MinerU output
+        |
+        v
+     DocIR blocks  -- page + bounding box provenance
+        |
+        v
+ section-aware chunks -- clinical tags + citation spans
+        |
+        v
+ lexical retrieval baseline -- ranked, page-cited excerpts
+```
+
+## Quality checks
 
 ```bash
-python -m medrag.cli ingest \
-  --input_dir "./samples" \
-  --out_dir "./out"
+pytest -q
+python -m compileall -q src scripts
+python scripts/benchmark_demo.py
 ```
 
-输出：
-- `out/docir/*.json`: 统一中间表示（DocIR）
-- `out/chunks/*.jsonl`: 语义切片后的 chunk（可直接用于向量库/检索）
+The end-to-end test generates a synthetic PDF, parses it, chunks it, retrieves a clinical passage, and verifies the page citation. No external medical document or restricted dataset is required.
 
-### 设计要点（后续接 MinerU）
+`results/benchmark.json` records local engineering latency for a 10-page synthetic text-layer PDF. It is not a clinical retrieval-quality claim.
 
-当前默认解析器使用 PyMuPDF 做“可用性优先”的版面文本抽取，并保留 `page/bbox` 以做溯源。
-如果你们已有 MinerU 的 JSON 输出，只需要实现 `medrag/parsers/mineru_adapter.py` 中的 `parse_mineru_json()`，把 MinerU JSON 映射到 `DocIR`，后续切片与入库逻辑无需改动。
+## Current limitations
+
+- The built-in search is a transparent lexical baseline, not an embedding model.
+- Native PDF reading order remains heuristic for complex multi-column layouts.
+- Tables and figures need stronger structure recovery and evaluation.
+- MinerU cloud processing requires a separately obtained service token.
+
+## Repository map
+
+- `src/medrag/parsers/`: native PDF and MinerU adapters
+- `src/medrag/chunking/`: section-aware semantic chunking
+- `src/medrag/retrieval.py`: lexical baseline
+- `src/medrag/schema.py`: typed provenance schema
+- `tests/`: synthetic end-to-end verification
+- `scripts/`: optional MinerU batch integration

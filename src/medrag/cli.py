@@ -8,6 +8,7 @@ from tqdm import tqdm
 from medrag.chunking import ChunkOptions, chunk_docir
 from medrag.io import dump_json, ensure_dir, write_jsonl
 from medrag.parsers import ParseOptions, parse_mineru_cloud_dir, parse_pdf_to_docir
+from medrag.retrieval import load_chunks, search_chunks
 
 
 def _iter_pdfs(input_dir: Path) -> list[Path]:
@@ -80,6 +81,35 @@ def cmd_ingest_mineru_cloud(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_search(args: argparse.Namespace) -> int:
+    chunks = load_chunks(args.chunk_dir)
+    hits = search_chunks(chunks, args.query, top_k=args.top_k)
+    if not hits:
+        print("No matching chunks found.")
+        return 1
+
+    for rank, hit in enumerate(hits, start=1):
+        pages = sorted({citation.page for citation in hit.chunk.citations})
+        section = " > ".join(hit.chunk.section_path) or "(unsectioned)"
+        excerpt = " ".join(hit.chunk.text.split())[: args.excerpt_chars]
+        print(f"[{rank}] score={hit.score:.6f} pages={pages} section={section}")
+        print(excerpt)
+        print()
+    return 0
+
+
+def cmd_stats(args: argparse.Namespace) -> int:
+    chunks = load_chunks(args.chunk_dir)
+    documents = {chunk.doc_id for chunk in chunks}
+    pages = {citation.page for chunk in chunks for citation in chunk.citations}
+    total_chars = sum(len(chunk.text) for chunk in chunks)
+    print(f"documents={len(documents)}")
+    print(f"chunks={len(chunks)}")
+    print(f"cited_pages={len(pages)}")
+    print(f"characters={total_chars}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="medrag", description="医疗 PDF → DocIR → 语义切片（原型）")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -97,6 +127,17 @@ def build_parser() -> argparse.ArgumentParser:
     ing2.add_argument("--max_chars", type=int, default=1400, help="chunk 最大字符数")
     ing2.add_argument("--min_chars", type=int, default=300, help="chunk 最小字符数（过小会合并到上一块）")
     ing2.set_defaults(func=cmd_ingest_mineru_cloud)
+
+    search = sub.add_parser("search", help="Search generated chunks with a dependency-free lexical baseline")
+    search.add_argument("--chunk_dir", required=True, help="Directory containing chunk JSONL files")
+    search.add_argument("--query", required=True, help="Search query")
+    search.add_argument("--top_k", type=int, default=5, help="Number of results")
+    search.add_argument("--excerpt_chars", type=int, default=320, help="Maximum excerpt length")
+    search.set_defaults(func=cmd_search)
+
+    stats = sub.add_parser("stats", help="Summarise a generated chunk collection")
+    stats.add_argument("--chunk_dir", required=True, help="Directory containing chunk JSONL files")
+    stats.set_defaults(func=cmd_stats)
 
     return p
 

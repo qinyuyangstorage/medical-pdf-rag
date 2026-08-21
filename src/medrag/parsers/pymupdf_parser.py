@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 from medrag.io import stable_doc_id
 from medrag.schema import BBox, DocBlock, DocIR

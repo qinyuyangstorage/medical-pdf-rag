@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medical-pdf-rag"
+version = "0.2.0"
+description = "Traceable medical PDF ingestion, semantic chunking, and lexical retrieval baseline"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "orjson>=3.10,<4",
+  "pydantic>=2.7,<3",
+  "pymupdf>=1.24,<2",
+  "tqdm>=4.66,<5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+medrag = "medrag.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

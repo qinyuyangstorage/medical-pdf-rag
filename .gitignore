@@ -1,9 +1,13 @@
 .venv/
 .venv-*/
 out/
+out_*/
+samples/
+mineru_cloud_out/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
 
 # Local secrets (do not commit); keep only instructions and templates.
 secrets/*

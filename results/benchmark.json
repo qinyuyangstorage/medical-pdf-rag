@@ -1,0 +1,11 @@
+{
+  "document": "10-page synthetic text-layer medical-style PDF",
+  "pages": 10,
+  "blocks": 20,
+  "chunks": 10,
+  "top_k_hits": 5,
+  "ingest_and_chunk_ms": 36.453249980695546,
+  "search_ms": 0.425333040766418,
+  "all_hits_have_page_citations": true,
+  "note": "Local engineering benchmark; not a clinical retrieval-quality result."
+}

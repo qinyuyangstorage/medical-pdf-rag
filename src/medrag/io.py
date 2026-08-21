@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import hashlib
 from pathlib import Path
 from typing import Iterable
 
@@ -29,7 +29,9 @@ def write_jsonl(path: str | Path, rows: Iterable[dict]) -> None:
 
 
 def stable_doc_id(source_path: str) -> str:
-    # Use basename + size + mtime as a simple stable id without hashing huge files.
-    st = os.stat(source_path)
-    base = Path(source_path).name
-    return f"{base}__{st.st_size}__{int(st.st_mtime)}"
+    path = Path(source_path)
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return f"{path.stem}__{digest.hexdigest()[:16]}"

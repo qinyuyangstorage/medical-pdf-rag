@@ -1,4 +1,4 @@
-# Medical PDF RAG
+# Medical PDF RAG: Traceable Ingestion and Retrieval
 
 A traceable ingestion and retrieval baseline for turning medical PDFs into citation-ready JSONL chunks. The project preserves page numbers and bounding boxes so every retrieved passage can be traced back to its source page.
 
@@ -12,7 +12,7 @@ A traceable ingestion and retrieval baseline for turning medical PDFs into citat
 - Deterministic content-based document identifiers
 - Automated end-to-end tests and GitHub Actions
 
-This is a document-engineering prototype, not a clinical decision-support system. It does not provide medical advice and it does not include patient data.
+This is a document-engineering prototype, not a clinical decision-support system. It does not provide medical advice and the repository contains no patient data.
 
 ## Quick start
 
@@ -57,7 +57,14 @@ medrag ingest-mineru-cloud \
   --out_dir ./out_mineru
 ```
 
-Tokens, source PDFs, extracted text, generated chunks, and virtual environments are excluded from version control.
+Tokens, source PDFs, extracted text, generated chunks, and virtual environments are excluded from version control. The MinerU route sends documents to an external service; use it only when the document owner and applicable data rules permit external processing.
+
+## Privacy behavior
+
+- Generated document IDs are derived only from a SHA-256 content fingerprint; input filenames are not embedded in IDs.
+- Source filenames and absolute local paths are omitted from `DocIR` by default.
+- Generated `out/` and `mineru_cloud_out/` directories are ignored by Git.
+- Treat extracted text and chunks as sensitive whenever the source document is sensitive, even though the repository itself contains only synthetic tests.
 
 ## Architecture
 
@@ -91,13 +98,17 @@ The end-to-end test generates a synthetic PDF, parses it, chunks it, retrieves a
 - The built-in search is a transparent lexical baseline, not an embedding model.
 - Native PDF reading order remains heuristic for complex multi-column layouts.
 - Tables and figures need stronger structure recovery and evaluation.
-- MinerU cloud processing requires a separately obtained service token.
+- The live MinerU service integration requires a separately obtained token and is not exercised by CI; CI covers the output adapter with synthetic JSON.
 
 ## Repository map
 
 - `src/medrag/parsers/`: native PDF and MinerU adapters
-- `src/medrag/chunking/`: section-aware semantic chunking
+- `src/medrag/chunking/`: heuristic section-aware chunking
 - `src/medrag/retrieval.py`: lexical baseline
 - `src/medrag/schema.py`: typed provenance schema
 - `tests/`: synthetic end-to-end verification
 - `scripts/`: optional MinerU batch integration
+
+## License
+
+MIT. See `LICENSE`.

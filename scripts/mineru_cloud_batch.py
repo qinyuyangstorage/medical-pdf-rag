@@ -66,7 +66,7 @@ def main() -> int:
 
     try:
         from mineru import MinerU  # type: ignore
-    except Exception as e:  # pragma: no cover
+    except ImportError as e:  # pragma: no cover
         print("未安装 mineru-open-sdk。请先在你的 Python3.10+ venv 里执行：pip install mineru-open-sdk")
         print(f"导入失败详情：{e!r}")
         return 3

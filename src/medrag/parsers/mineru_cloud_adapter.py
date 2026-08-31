@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import orjson
 
 from medrag.io import stable_doc_id
 from medrag.schema import BBox, DocBlock, DocIR
-
 
 _SKIP_TYPES = {
     "page_header",
@@ -94,7 +94,9 @@ def _extract_text(item: dict) -> str:
     return ""
 
 
-def parse_mineru_cloud_dir(doc_dir: str | Path, *, source_pdf_path: str | None = None) -> DocIR:
+def parse_mineru_cloud_dir(
+    doc_dir: str | Path, *, source_pdf_path: str | None = None, include_source_name: bool = False
+) -> DocIR:
     """
     Parse a single MinerU cloud output folder (per-PDF).
 
@@ -111,14 +113,16 @@ def parse_mineru_cloud_dir(doc_dir: str | Path, *, source_pdf_path: str | None =
 
     pages = _read_json(content_path)
     if not isinstance(pages, list):
-        raise ValueError("content_list_v2.json 格式异常：顶层不是 list")
+        raise TypeError("content_list_v2.json 格式异常：顶层不是 list")
 
-    # doc_id uses original pdf path if provided; else fallback to origin.pdf in folder
-    if source_pdf_path is None:
-        origin_pdf = next(doc_dir.glob("*_origin.pdf"), None)
-        source_pdf_path = str(origin_pdf) if origin_pdf else str(doc_dir)
-
-    doc_id = stable_doc_id(source_pdf_path)
+    # Prefer the original PDF as the content fingerprint. If MinerU output does
+    # not retain it, fingerprint the canonical content list instead.
+    origin_pdf = next(doc_dir.glob("*_origin.pdf"), None)
+    fingerprint_path = Path(source_pdf_path) if source_pdf_path else origin_pdf or content_path
+    if not fingerprint_path.is_file():
+        raise FileNotFoundError(f"Document fingerprint source is not a file: {fingerprint_path}")
+    doc_id = stable_doc_id(str(fingerprint_path))
+    source_name = fingerprint_path.name if include_source_name else ""
 
     blocks: list[DocBlock] = []
     order = 0
@@ -175,8 +179,8 @@ def parse_mineru_cloud_dir(doc_dir: str | Path, *, source_pdf_path: str | None =
 
     return DocIR(
         doc_id=doc_id,
-        source_path=source_pdf_path,
+        source_path=source_name,
         title=title,
         blocks=blocks,
-        meta={"parser": "mineru_cloud", "doc_dir": str(doc_dir)},
+        meta={"parser": "mineru_cloud"},
     )

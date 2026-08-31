@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import orjson
 
@@ -30,8 +30,10 @@ def write_jsonl(path: str | Path, rows: Iterable[dict]) -> None:
 
 def stable_doc_id(source_path: str) -> str:
     path = Path(source_path)
+    if not path.is_file():
+        raise ValueError(f"Document fingerprint source must be a file: {path}")
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
-    return f"{path.stem}__{digest.hexdigest()[:16]}"
+    return f"doc_{digest.hexdigest()[:16]}"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,8 +17,8 @@ BlockType = Literal["title", "heading", "paragraph", "list_item", "table", "figu
 
 class CitationSpan(BaseModel):
     page: int = Field(ge=1, description="1-based page number")
-    bbox: Optional[BBox] = None
-    text_snippet: Optional[str] = None
+    bbox: BBox | None = None
+    text_snippet: str | None = None
 
 
 class DocBlock(BaseModel):
@@ -26,7 +26,7 @@ class DocBlock(BaseModel):
     type: BlockType
     text: str = ""
     page: int = Field(ge=1)
-    bbox: Optional[BBox] = None
+    bbox: BBox | None = None
     order: int = Field(ge=0, description="reading order index within document")
     meta: dict = Field(default_factory=dict)
 
@@ -34,7 +34,7 @@ class DocBlock(BaseModel):
 class DocIR(BaseModel):
     doc_id: str
     source_path: str
-    title: Optional[str] = None
+    title: str | None = None
     blocks: list[DocBlock]
     meta: dict = Field(default_factory=dict)
 

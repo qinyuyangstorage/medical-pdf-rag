@@ -101,7 +101,7 @@ def cmd_search(args: argparse.Namespace) -> int:
 def cmd_stats(args: argparse.Namespace) -> int:
     chunks = load_chunks(args.chunk_dir)
     documents = {chunk.doc_id for chunk in chunks}
-    pages = {citation.page for chunk in chunks for citation in chunk.citations}
+    pages = {(chunk.doc_id, citation.page) for chunk in chunks for citation in chunk.citations}
     total_chars = sum(len(chunk.text) for chunk in chunks)
     print(f"documents={len(documents)}")
     print(f"chunks={len(chunks)}")

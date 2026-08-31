@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from medrag.schema import Chunk, CitationSpan, DocBlock, DocIR
 
-
 _SECTION_RX = re.compile(
     r"^\s*(abstract|background|methods?|materials and methods|results?|discussion|conclusions?|references?)\s*$",
     re.IGNORECASE,

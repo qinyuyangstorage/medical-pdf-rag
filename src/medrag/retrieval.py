@@ -10,7 +10,6 @@ import orjson
 
 from medrag.schema import Chunk
 
-
 _TOKEN_RX = re.compile(r"[A-Za-z][A-Za-z0-9_-]+|[\u4e00-\u9fff]")
 
 
